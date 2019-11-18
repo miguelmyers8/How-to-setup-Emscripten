@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+
+  <script>
+  var Module = {
+    onRuntimeInitialized: function() {
+      //console.log('lerp result: ' + Module.lerp(1,2,3,[1]));
+      j = Module.lerp(1,2,3,[1])
+      console.log(j.x,j.y);
+    }
+  };
+
+  </script>
+
+  <script src="build/cpp_full.js"></script>
+</html>
