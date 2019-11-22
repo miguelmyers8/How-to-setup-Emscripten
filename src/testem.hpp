@@ -4,71 +4,57 @@
 #include <emscripten/val.h>
 #include <vector>
 
+#include "Tensor.hpp"
+#include <xtensor/xrandom.hpp>
+#include <xtensor/xarray.hpp>
+#include <xtensor/xio.hpp>
 
-using namespace emscripten;
+//#include <xtensor-blas/xlinalg.hpp>
+#include <boost/variant/variant.hpp>
+#include <memory>
+using namespace std;
 
+Tensor add_(Tensor t1, Tensor t2){
+    auto out = t1.data + t2.data;
+    bool requires_grad = t1.requires_grad || t2.requires_grad;
+    std::vector<Dependancies> depends_on = {};
 
-template <typename T>
-std::vector<T> vecFromJSArrayr(const emscripten::val &v)
-{
-    std::vector<T> rv;
+    if(t1.requires_grad){
 
-    const auto l = v["length"].as<unsigned>();
-    rv.resize(l);
+        auto add_grad_1 = [=] (xt::xarray<double> y) {
+            xt::xarray<double> grad = y;
+            xt::svector<size_t> shape = t1.shape;
+            int ndims_added = y.dimension() - t1.data.dimension();
 
-    emscripten::val memoryView{emscripten::typed_memory_view(l, rv.data())};
-    memoryView.call<void>("set", v);
+            for (int i = 0; i< ndims_added; ++i)
+                 grad = xt::sum(grad, 0);
 
-    return rv;
-}
+            for(std::size_t k = 0; k < shape.size(); ++k)
+                if (shape[k] == 1)
+                    grad = xt::sum(grad,(k+0),xt::keep_dims);
 
+            return grad;
+        };
 
+        depends_on.push_back(Dependancies(t1,add_grad_1,"add.<add_grad_1>"));
+    };
 
+     if(t2.requires_grad){
+         auto add_grad_2 = [=] (xt::xarray<double> y) {
+             xt::xarray<double> grad = y;
+             xt::svector<size_t> shape = t1.shape;
+             int ndims_added = y.dimension() - t2.data.dimension();
 
-class MyClass {
-public:
-    MyClass(int x, std::string y)
-        : x(x)
-        , y(y)
-    {}
+             for (int i = 0; i< ndims_added; ++i)
+                 grad = xt::sum(grad, 0);
 
-    void incrementX() {
-        ++x;
-    }
+             for(std::size_t i = 0; i < shape.size(); ++i)
+                 if (shape[i] == 1)
+                     grad = xt::sum(grad,(i+0),xt::keep_dims);
 
-    int getX() const { return x; }
-    void setX(int x_) { x = x_; }
-
-     std::string getStringFromInstance() const {
-        return y;
-    }
-
-private:
-    int x;
-    std::string y;
+             return grad ;
+        };
+     depends_on.push_back(Dependancies(t2,add_grad_2,"add.<add_grad_2>"));
+     };
+    return Tensor(out,requires_grad,depends_on);
 };
-
-MyClass lerp(float a, float b, float t, val j) {
-    auto k = vecFromJSArrayr<int>(j);
-    //std::vector<size_t> shape = k.shape();
-
-    for (const auto i : k ){ // access by const reference
-       std::cout << i << ' '<<std::endl;
-
-   }
-
-   MyClass my(1,"c++");
-
-    return my;
-}
-
-EMSCRIPTEN_BINDINGS(my_module) {
-    function("lerp", &lerp);
-
-    class_<MyClass>("MyClass")
-        .constructor<int, std::string>()
-        .function("incrementX", &MyClass::incrementX)
-        .property("x", &MyClass::getX, &MyClass::setX)
-        .property("y", &MyClass::getStringFromInstance)
-        ;
-}

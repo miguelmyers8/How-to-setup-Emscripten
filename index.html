@@ -5,12 +5,22 @@
   var Module = {
     onRuntimeInitialized: function() {
       //console.log('lerp result: ' + Module.lerp(1,2,3,[1]));
-      j = Module.lerp(1,2,3,[1])
-      console.log(j.x,j.y);
+      j =  Module.lerp([1])
+      k =  Module.lerp([4])
+      c =  Module.add_(j,k)
+
+      console.log(c.rg());
+
+
     }
   };
 
+  window.onload = function what(){
+document.getElementById('log').innerHTML = 'hi';
+};
   </script>
+  <div id="log">initial content</div>
+
 
   <script src="build/cpp_full.js"></script>
 </html>

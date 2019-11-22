@@ -3,5 +3,5 @@
 $ mkdir build && cd build <br>
 $ ../emsdk/upstream/emscripten/emconfigure cmake .. <br>
 $ ../emsdk/upstream/emscripten/emmake make <br>
-$ cd ..
+$ cd ..<br>
 $ python3 -m http.server <br>
